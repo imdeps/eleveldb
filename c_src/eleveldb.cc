@@ -76,6 +76,34 @@ static ErlNifFunc nif_funcs[] =
 };
 
 
+class UidVersionComparator : public leveldb::Comparator {
+public:
+    // Three-way comparison function:
+    //   if a < b: negative result
+    //   if a > b: positive result
+    //   else: zero result
+    int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const {
+        size_t sa = a.size();
+        size_t sb = b.size();
+        size_t min = sa > sb ? sb : sa;
+
+        for(int i=0; i < min; i++) {
+            unsigned char ca = a.data()[i];
+            unsigned char cb = b.data()[i];
+            if(ca != cb) {
+                return ca - cb;
+            }
+        }
+
+        return sa - sb;
+    }
+
+    // Ignore the following methods for now:
+    const char* Name() const { return "UidVersionComparator"; }
+    void FindShortestSeparator(std::string*, const leveldb::Slice&) const { }
+    void FindShortSuccessor(std::string*) const { }
+};
+
 namespace eleveldb {
 
 // Atoms (initialized in on_load)
@@ -570,6 +598,10 @@ async_open(
     leveldb::Options *opts = new leveldb::Options;
     fold(env, argv[2], parse_open_option, *opts);
     opts->fadvise_willneed = priv.m_Opts.m_FadviseWillNeed;
+
+    //custom comparator
+    UidVersionComparator cmp;
+    opts->comparator = &cmp;
 
     // convert total_leveldb_mem to byte count if it arrived as percent
     //  This happens now because there is no guarantee as to when the total_memory
