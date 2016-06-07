@@ -600,8 +600,8 @@ async_open(
     opts->fadvise_willneed = priv.m_Opts.m_FadviseWillNeed;
 
     //custom comparator
-    UidVersionComparator cmp;
-    opts->comparator = &cmp;
+    UidVersionComparator *cmp = new UidVersionComparator;
+    opts->comparator = cmp;
 
     // convert total_leveldb_mem to byte count if it arrived as percent
     //  This happens now because there is no guarantee as to when the total_memory
